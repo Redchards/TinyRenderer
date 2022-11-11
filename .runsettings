@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+   <!-- Configurations that affect the Test Framework -->
+   <RunConfiguration>
+       <MaxCpuCount>8</MaxCpuCount>
+       <ResultsDirectory>.\TestResults</ResultsDirectory><!-- Path relative to solution directory -->
+       <TestSessionTimeout>60000</TestSessionTimeout><!-- Milliseconds -->
+   </RunConfiguration>
+
+   <!-- Adapter Specific sections -->
+   <Catch2Adapter>
+       <CombinedTimeout>60000</CombinedTimeout><!-- Milliseconds; Introduced in v1.6.0 -->
+       <DebugBreak>on</DebugBreak><!-- Introduced in v1.1.0 -->
+       <DiscoverCommandLine>--verbosity high --list-tests --reporter xml *</DiscoverCommandLine>
+       <DiscoverTimeout>500</DiscoverTimeout><!-- Milliseconds -->
+       <Environment><!-- Introduced in v1.7.0 -->
+         <MyCustomEnvSetting>Welcome</MyCustomEnvSetting>
+         <MyOtherCustomEnvSetting value="debug&lt;0&gt;"/>
+       </Environment>
+       <ExecutionMode>Combine</ExecutionMode><!-- Introduced in v1.6.0 -->
+       <ExecutionModeForceSingleTagRgx>Slow</ExecutionModeForceSingleTagRgx><!-- Introduced in v1.6.0 -->
+       <FilenameFilter>^Test</FilenameFilter><!-- Regex filter -->
+       <IncludeHidden>true</IncludeHidden>
+       <Logging>normal</Logging>
+       <MessageFormat>StatsOnly</MessageFormat>
+       <StackTraceFormat>ShortInfo</StackTraceFormat>
+       <StackTraceMaxLength>60</StackTraceMaxLength><!-- Introduced in v1.6.0 -->
+       <StackTracePointReplacement>,</StackTracePointReplacement><!-- Introduced in v1.3.0 -->
+       <TestCaseTimeout>20000</TestCaseTimeout><!-- Milliseconds -->
+       <WorkingDirectory>..\TestData</WorkingDirectory>
+       <WorkingDirectoryRoot>Executable</WorkingDirectoryRoot>
+   </Catch2Adapter>
+
+</RunSettings>
