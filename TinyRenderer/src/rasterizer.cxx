@@ -38,6 +38,7 @@ Rasterizer::Rasterizer(resource::WindowHandle&& window_handle)
 , window_{ std::move(window_handle) }
 , render_{}
 , canvas_{}
+, clear_color_{ 0, 0, 0, 0 }
 , window_dimensions_{}
 , text_overlay_{}
 {
@@ -54,7 +55,7 @@ Rasterizer::Rasterizer(resource::WindowHandle&& window_handle)
     render_ = SDL_CreateRenderer(window_.get(), -1, SDL_RENDERER_ACCELERATED);
     AssertThat(render_.get(), !IsNull());
 
-    SDL_SetRenderDrawColor(render_.get(), 0, 0, 0, SDL_ALPHA_OPAQUE);
+    SDL_SetRenderDrawColor(render_.get(), clear_color_.r, clear_color_.g, clear_color_.b, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(render_.get());
 
     regenerate_canvas();
@@ -75,6 +76,7 @@ void Rasterizer::render()
     SDL_RenderCopy(render_.get(), canvas_.get(), nullptr, nullptr);
     render_overlay();
     SDL_RenderPresent(render_.get());
+    std::fill(buffer_.begin(), buffer_.end(), color_to_colorpoint(clear_color_));
 }
 
 void Rasterizer::render_overlay()
@@ -91,12 +93,17 @@ void Rasterizer::draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, C
 {
     bool steep = false;
 
-    x0 = std::clamp(x0, 0u, window_dimensions_.width - 1);
-    x1 = std::clamp(x1, 0u, window_dimensions_.width - 1);
-    y0 = std::clamp(y0, 0u, window_dimensions_.height - 1);
-    y1 = std::clamp(y1, 0u, window_dimensions_.height - 1);
+    if (!is_in_bounds(x0, y0) && !is_in_bounds(x1, y1)) return;
 
-    if (std::abs(static_cast<double>(x1) - x0) < std::abs(static_cast<double>(y1) - y0))
+    x0 = std::min(x0, window_dimensions_.width - 1);
+    x1 = std::min(x1, window_dimensions_.width - 1);
+    y0 = std::min(y0, window_dimensions_.height - 1);
+    y1 = std::min(y1, window_dimensions_.height - 1);
+
+    auto dx = std::max(x0, x1) - std::min(x0, x1);
+    auto dy = std::max(y0, y1) - std::min(y0, y1);
+
+    if (dx < dy)
     {
         std::swap(x0, y0);
         std::swap(x1, y1);
@@ -109,24 +116,41 @@ void Rasterizer::draw_line(uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1, C
         std::swap(y0, y1);
     }
 
-    for (double xi = x0; xi <= x1; ++xi)
+    dy = std::max(y0, y1) - std::min(y0, y1);
+    int32_t error = 0;
+    int32_t y = y0;
+
+    const uint32_t dx_dy = dy * 2;
+    const int32_t sdx = x1 - x0;
+    const int8_t delta = y1 > y0 ? 1 : -1;
+
+    if (steep)
     {
-        size_t idx = 0;
-        double t = 1. - static_cast<double>(x1 - xi) / (x1 - x0);
-
-        uint32_t x = static_cast<uint32_t>(x0 + t * (x1 - x0));
-        uint32_t y = static_cast<uint32_t>((1 - t) * y0 + t * y1);
-
-        if (steep)
+        for (uint32_t x = x0; x <= x1; ++x)
         {
-            idx = static_cast<size_t>(x) * window_dimensions_.width + y;
-        }
-        else
-        {
-            idx = static_cast<size_t>(y) * window_dimensions_.width + x;
-        }
+            canvas_set(y, x, color);
 
-        buffer_[idx] = 0xFF | color.r << 16 | color.g << 8 | color.b;
+            error += dx_dy;
+            if (error > sdx)
+            {
+                y += delta;
+                error -= sdx * 2;
+            }
+        }
+    }
+    else
+    {
+        for (uint32_t x = x0; x <= x1; ++x)
+        {
+            canvas_set(x, y, color);
+
+            error += dx_dy;
+            if (error > sdx)
+            {
+                y += delta;
+                error -= sdx * 2;
+            }
+        }
     }
 }
 
@@ -145,7 +169,7 @@ void Rasterizer::draw(const Mesh& mesh)
             int32_t y0 = static_cast<int32_t>((v0(1) + 1.) * window_dimensions_.height / 2.);
             int32_t x1 = static_cast<int32_t>((v1(0) + 1.) * window_dimensions_.width / 2.);
             int32_t y1 = static_cast<int32_t>((v1(1) + 1.) * window_dimensions_.height / 2.);
-            draw_line(x0, y0, x1, y1, Color{ 255, 0, 0 });
+            draw_line(x0, y0, x1, y1, Color{ 0, 255, 0 });
         }
     }
 }
@@ -164,6 +188,22 @@ void Rasterizer::regenerate_canvas()
 
     buffer_.clear();
     buffer_.resize(static_cast<size_t>(window_dimensions_.width) * static_cast<size_t>(window_dimensions_.height));
+}
+
+void Rasterizer::canvas_set(uint32_t x, uint32_t y, const Color& color)
+{
+    size_t idx = static_cast<size_t>(y) * window_dimensions_.width + x;
+    buffer_[idx] = color_to_colorpoint(color);
+}
+
+bool Rasterizer::is_in_bounds(uint32_t x, uint32_t y)
+{
+    return x < window_dimensions_.width && y < window_dimensions_.height;
+}
+
+uint32_t Rasterizer::color_to_colorpoint(const Color& color)
+{
+    return 0xFF << 24 | color.r << 16 | color.g << 8 | color.b;
 }
 
 

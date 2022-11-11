@@ -49,6 +49,11 @@ public:
 
 private:
     void regenerate_canvas();
+    void canvas_set(uint32_t x, uint32_t y, const Color& color);
+
+    // TODO : to utils
+    bool is_in_bounds(uint32_t x, uint32_t y);
+    uint32_t color_to_colorpoint(const Color& color);
 
 private:
     static constexpr WindowDimensions MIN_WINDOW_DIM{ 50, 50 };
@@ -57,6 +62,7 @@ private:
     resource::WindowHandle window_;
     resource::RendererHandle render_;
     resource::TextureHandle canvas_;
+    Color clear_color_;
     WindowDimensions window_dimensions_;
     resource::TextureHandle text_overlay_;
 };

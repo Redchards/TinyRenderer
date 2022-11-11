@@ -48,7 +48,7 @@ public:
                 iss >> trash;
                 Vector3d v;
                 for (int i = 0; i < 3; i++) iss >> v[i];
-                for (int i = 1; i < 3; i++) v[i] = 0.5 - v[i];
+                for (int i = 1; i < 3; i++) v[i] = -v[i];
                 vertices.push_back(v);
             }
             else if (!line.compare(0, 2, "f "))
@@ -84,6 +84,15 @@ public:
     const Vector3i& get_face(size_t idx) const
     {
         return faces_[idx];
+    }
+
+    template<class Transform>
+    void transform(const Transform& transform_operator)
+    {
+        for (auto& vertex : vertices_)
+        {
+            vertex = transform_operator(vertex);
+        }
     }
 
 private:

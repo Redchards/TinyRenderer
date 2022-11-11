@@ -5,6 +5,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 
+#include <Eigen/Dense>
+#include <Eigen/Geometry>
+
 #include <plog/Log.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 #include <plog/Initializers/ConsoleInitializer.h>
@@ -12,6 +15,7 @@
 #include <snowhouse/snowhouse.h>
 
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <format>
@@ -19,6 +23,7 @@
 
 constexpr int INITIAL_WINDOW_WIDTH = 800;
 constexpr int INITIAL_WINDOW_HEIGHT = 600;
+constexpr double PI = M_PI;
 
 namespace tinyrenderer
 {
@@ -86,10 +91,14 @@ public:
         }
     }
 
+    auto get_frame_time()
+    {
+        return static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_frame_time_ - start_frame_time_).count());
+    }
+
     resource::SurfaceHandle get_frame_info_surface()
     {
-        auto frame_time = static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(end_frame_time_ - start_frame_time_).count());
-
+        auto frame_time = get_frame_time();
         auto info = std::format("Frame time : {:.2f}ms            FPS : {:.0f}",
             frame_time / 1000.,
             1000000. / frame_time
@@ -107,12 +116,24 @@ private:
     FontHandle font_;
 };
 
+void rotate_mesh(Mesh& mesh, double delta_time)
+{
+    if (delta_time == 0.) return;
+    double angle = 2 * PI * (delta_time / 2000000.);
+
+    auto rotation_matrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY()).toRotationMatrix();
+    // Eigen::Matrix4f rotation_matrix = Eigen::Matrix4f::Identity();
+
+    mesh.transform([&rotation_matrix](const Eigen::Vector3d& vertex)
+    {
+        return rotation_matrix * vertex;
+    });
+}
+
 void main_loop()
 {
     init_log();
     bool running = true;
-    auto start = std::chrono::steady_clock::now();
-    auto end = std::chrono::steady_clock::now();
 
     WindowDimensions window_dimensions{ INITIAL_WINDOW_WIDTH, INITIAL_WINDOW_HEIGHT };
     Mesh mesh = *Mesh::load("assets/mesh/mumbaka.obj");
@@ -187,8 +208,7 @@ void main_loop()
             frame_reporter.end_frame();
             rasterizer.draw_text(frame_reporter.get_frame_info_surface());
             rasterizer.render_overlay();
-
-            auto ms = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+            rotate_mesh(mesh, frame_reporter.get_frame_time());
         }
     }
 }
