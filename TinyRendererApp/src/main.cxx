@@ -122,7 +122,6 @@ void rotate_mesh(Mesh& mesh, double delta_time)
     double angle = 2 * PI * (delta_time / 2000000.);
 
     auto rotation_matrix = Eigen::AngleAxisd(angle, Eigen::Vector3d::UnitY()).toRotationMatrix();
-    // Eigen::Matrix4f rotation_matrix = Eigen::Matrix4f::Identity();
 
     mesh.transform([&rotation_matrix](const Eigen::Vector3d& vertex)
     {
@@ -203,10 +202,18 @@ void main_loop()
             }
 
             rasterizer.draw(mesh);
+            rasterizer.draw_wireframe(mesh);
+            /* std::vector<Eigen::Vector2i> t0 = {{10, 70}, {50, 160}, {70, 80}};
+            std::vector<Eigen::Vector2i> t1 = { { 180, 50 }, { 150, 1 }, { 70, 180 } };
+            std::vector<Eigen::Vector2i> t2 = { { 180, 150 }, { 120, 160 }, { 130, 180 } };
+
+            rasterizer.draw_triangle(t0[0], t0[1], t0[2], { 255, 0, 0 });
+            rasterizer.draw_triangle(t1[0], t1[1], t1[2], { 255, 255, 255 });
+            rasterizer.draw_triangle(t2[0], t2[1], t2[2], { 0, 255, 0 }); */
             rasterizer.render();
 
             frame_reporter.end_frame();
-            rasterizer.draw_text(frame_reporter.get_frame_info_surface());
+            rasterizer.draw_overlay(frame_reporter.get_frame_info_surface());
             rasterizer.render_overlay();
             rotate_mesh(mesh, frame_reporter.get_frame_time());
         }
